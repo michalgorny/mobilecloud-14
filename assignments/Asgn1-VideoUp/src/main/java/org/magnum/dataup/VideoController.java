@@ -20,7 +20,7 @@ package org.magnum.dataup;
 import org.springframework.stereotype.Controller;
 
 @Controller
-public class AnEmptyController {
+public class VideoController {
 
 	/**
 	 * You will need to create one or more Spring controllers to fulfill the
