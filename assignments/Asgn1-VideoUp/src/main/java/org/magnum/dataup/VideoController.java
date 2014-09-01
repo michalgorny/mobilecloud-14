@@ -17,6 +17,7 @@
  */
 package org.magnum.dataup;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
@@ -30,15 +31,14 @@ import org.magnum.dataup.model.Video;
 import org.magnum.dataup.model.VideoStatus;
 import org.magnum.dataup.model.VideoStatus.VideoState;
 import org.springframework.data.rest.webmvc.ResourceNotFoundException;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.multipart.MultipartFile;
@@ -47,71 +47,81 @@ import org.springframework.web.multipart.MultipartFile;
 public class VideoController {
 
 	private static final String VIDEO_PATH = "/video";
-	
+
 	public static final String DATA_PARAMETER = "data";
 
 	public static final String ID_PARAMETER = "id";
-	
+
 	public static final String VIDEO_DATA_PATH = VIDEO_PATH + "/{id}/data";
 
 	private static final AtomicLong currentId = new AtomicLong(0L);
 
 	private Map<Long, Video> videos = new HashMap<Long, Video>();
-	
+
+	@ResponseBody
 	@RequestMapping(value = VIDEO_PATH, method = RequestMethod.GET)
-	public @ResponseBody Collection<Video> getVideoList() {
+	public Collection<Video> getVideoList() {
 		return videos.values();
 	}
 
-	@RequestMapping(value = VIDEO_PATH, method = RequestMethod.POST)
 	@ResponseBody
+	@RequestMapping(value = VIDEO_PATH, method = RequestMethod.POST)
 	public Video addVideo(@RequestBody Video video) {
 		save(video);
 		video.setDataUrl(getDataUrl(video.getId()));
 		return video;
 	}
-	
+
+	@ResponseBody 
 	@RequestMapping(value = VIDEO_DATA_PATH, method = RequestMethod.POST)
-	public @ResponseBody VideoStatus setVideoData(
-			@RequestParam(ID_PARAMETER) long id,
-			@RequestParam(DATA_PARAMETER) MultipartFile data){
+	public VideoStatus setVideoData(
+			@PathVariable(ID_PARAMETER) long id,
+			@RequestParam(DATA_PARAMETER) MultipartFile data) {
+
 		if (!videos.containsKey(id)) {
 			throw new ResourceNotFoundException();
 		}
-		
-		
+
 		try {
 			VideoFileManager videoFileManager = VideoFileManager.get();
-			
+
 			Video video = videos.get(id);
 			InputStream videoData = data.getInputStream();
 
 			videoFileManager.saveVideoData(video, videoData);
-			
-			if (videoFileManager.hasVideoData(video)) {
-				return new VideoStatus(VideoState.READY);
-			}else {
-				return new VideoStatus(VideoState.PROCESSING);
-			}
-			
+
+			return new VideoStatus(VideoState.READY);
+
 		} catch (IOException e) {
 			e.printStackTrace();
-			throw new RuntimeException(); //TODO Handling message exception
+			throw new RuntimeException(); // TODO Return appropriate HTTP error status
 		}
-		
+
 	}
-	
+
 	@ResponseBody
 	@RequestMapping(value = VIDEO_DATA_PATH, method = RequestMethod.GET, produces = MediaType.MULTIPART_FORM_DATA_VALUE)
-	public byte[] getVideoData(@RequestParam(value = ID_PARAMETER, required = true) long id) {
+	public byte[] getVideoData(@PathVariable(value = ID_PARAMETER) long id) {
 		if (!videos.containsKey(id)) {
 			throw new ResourceNotFoundException();
 		}
 		
-		return null;
+		try {
+			VideoFileManager videoFileManager = VideoFileManager.get();
+			Video video = videos.get(id);
+			if(videoFileManager.hasVideoData(video)){
+				ByteArrayOutputStream out = new ByteArrayOutputStream();
+				videoFileManager.copyVideoData(video, out);
+				return out.toByteArray();
+			}else {
+				throw new ResourceNotFoundException();
+			}
 		
-//		videos.get(id).get
-		
+		} catch (IOException e) {
+			e.printStackTrace();
+			throw new RuntimeException(); // TODO Return appropriate HTTP error status
+		}
+
 	}
 
 	private String getDataUrl(long videoId) {
