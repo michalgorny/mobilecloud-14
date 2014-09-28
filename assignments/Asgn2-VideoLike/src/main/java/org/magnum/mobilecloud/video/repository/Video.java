@@ -1,5 +1,6 @@
 package org.magnum.mobilecloud.video.repository;
 
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -8,6 +9,9 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+
+import org.magnum.mobilecloud.video.exceptions.AlreadyLikedException;
+import org.magnum.mobilecloud.video.exceptions.NotLikedYetException;
 
 import com.google.common.base.Objects;
 
@@ -85,11 +89,19 @@ public class Video {
 	}
 
 	public long getLikes() {
-		return likes;
+		return likesUser.size();
 	}
 	
 	public void setLikes(long likes) {
 		this.likes = likes;
+	}
+	
+	public Set<String> getLikesUser() {
+		return likesUser;
+	}
+
+	public void setLikesUser(Set<String> likesUser) {
+		this.likesUser = likesUser;
 	}
 	
 	/**
@@ -127,7 +139,17 @@ public class Video {
 			throw new AlreadyLikedException();
 		}
 		likesUser.add(username);
-		setLikes(likes++);
+	}
+
+	public void unlike(String username) throws NotLikedYetException {
+		if (!likesUser.contains(username)) {
+			throw new NotLikedYetException();
+		}
+		likesUser.remove(username);
+	}
+
+	public Collection<String> getUserLiked() {
+		return likesUser;
 	}
 
 }
