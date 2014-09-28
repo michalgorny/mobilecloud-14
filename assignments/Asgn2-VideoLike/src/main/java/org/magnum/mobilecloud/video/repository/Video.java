@@ -1,10 +1,13 @@
 package org.magnum.mobilecloud.video.repository;
 
+import java.util.HashSet;
+import java.util.Set;
+
+import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
-
-import org.springframework.data.annotation.Id;
+import javax.persistence.Id;
 
 import com.google.common.base.Objects;
 
@@ -34,6 +37,9 @@ public class Video {
 	private String url;
 	private long duration;
 	private long likes;
+	
+	@ElementCollection
+	private Set<String> likesUser = new HashSet<String>();
 	
 	public Video() {
 	}
@@ -113,6 +119,15 @@ public class Video {
 		} else {
 			return false;
 		}
+	}
+
+	
+	public void addLike(String username) throws AlreadyLikedException {
+		if (likesUser.contains(username)) {
+			throw new AlreadyLikedException();
+		}
+		likesUser.add(username);
+		setLikes(likes++);
 	}
 
 }

@@ -21,9 +21,13 @@ package org.magnum.mobilecloud.video;
 import java.security.Principal;
 import java.util.Collection;
 
+import org.magnum.mobilecloud.video.repository.AlreadyLikedException;
 import org.magnum.mobilecloud.video.repository.Video;
 import org.magnum.mobilecloud.video.repository.VideoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.rest.webmvc.ResourceNotFoundException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -39,11 +43,6 @@ public class VideoLikeController {
 	@Autowired
 	private VideoRepository videos;
 
-	@RequestMapping(value="/go",method=RequestMethod.GET)
-	public @ResponseBody String goodLuck(){
-		return "Good Luck!";
-	}
-	
 	@ResponseBody
 	@RequestMapping(value=VideoApi.VIDEO, method= RequestMethod.GET)
 	public Collection<Video> getVideos(){
@@ -63,9 +62,19 @@ public class VideoLikeController {
 	}
 	
 	@RequestMapping(value = VideoApi.VIDEO + "/{id}/" + VideoApi.LIKE_PARAMETER, method = RequestMethod.POST)
-	public void likeVideo(@RequestParam(value = "id") Long id) {
+	public ResponseEntity<String> likeVideo(@RequestParam(value = "id") Long id, Principal p) {
 		Video video = videos.findOne(id);
-		video.setLikes(video.getLikes() + 1);
+		if (video == null) {
+			throw new ResourceNotFoundException("Video with id " + id + " not found");
+		}
+		
+		try {
+			video.addLike(p.getName());
+			return new ResponseEntity<>(HttpStatus.OK);
+		} catch (AlreadyLikedException e) {
+			e.printStackTrace();
+			return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+		}
 	}
 	
 	@RequestMapping(value = VideoApi.VIDEO + "/{id}/" + VideoApi.UNLIKE_PARAMETER, method = RequestMethod.POST)

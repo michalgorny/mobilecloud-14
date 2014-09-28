@@ -36,7 +36,7 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 // automatically discovered and connected to the DispatcherServlet.
 @ComponentScan
 @Import(OAuth2SecurityConfiguration.class)
-//@EnableJpaRepositories(basePackageClasses = VideoRepository.class)
+@EnableJpaRepositories(basePackageClasses = VideoRepository.class)
 public class Application extends RepositoryRestMvcConfiguration {
 
 	// The app now requires that you pass the location of the keystore and
